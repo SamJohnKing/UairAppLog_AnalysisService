@@ -1,0 +1,1 @@
+c:\users\samjohnking\documents\visual studio 2013\Projects\UAir_AppLogService\UAir_AppLogService\bin\Debug\UAir_AppLogService.exe.config

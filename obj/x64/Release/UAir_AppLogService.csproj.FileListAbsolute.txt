@@ -1,0 +1,18 @@
+c:\users\samjohnking\documents\visual studio 2013\Projects\UAir_AppLogService\UAir_AppLogService\bin\x64\Release\UAir_AppLogService.exe.config
+c:\users\samjohnking\documents\visual studio 2013\Projects\UAir_AppLogService\UAir_AppLogService\bin\x64\Release\UAir_AppLogService.exe
+c:\users\samjohnking\documents\visual studio 2013\Projects\UAir_AppLogService\UAir_AppLogService\bin\x64\Release\UAir_AppLogService.pdb
+c:\users\samjohnking\documents\visual studio 2013\Projects\UAir_AppLogService\UAir_AppLogService\obj\x64\Release\UAir_AppLogService.csprojResolveAssemblyReference.cache
+c:\users\samjohnking\documents\visual studio 2013\Projects\UAir_AppLogService\UAir_AppLogService\obj\x64\Release\UAir_AppLogService.exe
+c:\users\samjohnking\documents\visual studio 2013\Projects\UAir_AppLogService\UAir_AppLogService\obj\x64\Release\UAir_AppLogService.pdb
+C:\Users\v-zhasha\Desktop\UAir_AppLogService\UAir_AppLogService\bin\x64\Release\UAir_AppLogService.exe.config
+C:\Users\v-zhasha\Desktop\UAir_AppLogService\UAir_AppLogService\obj\x64\Release\UAir_AppLogService.exe
+C:\Users\v-zhasha\Desktop\UAir_AppLogService\UAir_AppLogService\obj\x64\Release\UAir_AppLogService.pdb
+C:\Users\v-zhasha\Desktop\UAir_AppLogService\UAir_AppLogService\bin\x64\Release\UAir_AppLogService.exe
+C:\Users\v-zhasha\Desktop\UAir_AppLogService\UAir_AppLogService\bin\x64\Release\UAir_AppLogService.pdb
+C:\Users\v-zhasha\Desktop\UAir_AppLogService\UAir_AppLogService\obj\x64\Release\UAir_AppLogService.csprojResolveAssemblyReference.cache
+C:\Users\SamJohnKing\Desktop\UAir_AppLogService\UAir_AppLogService\bin\x64\Release\UAir_AppLogService.exe.config
+C:\Users\SamJohnKing\Desktop\UAir_AppLogService\UAir_AppLogService\bin\x64\Release\UAir_AppLogService.exe
+C:\Users\SamJohnKing\Desktop\UAir_AppLogService\UAir_AppLogService\bin\x64\Release\UAir_AppLogService.pdb
+C:\Users\SamJohnKing\Desktop\UAir_AppLogService\UAir_AppLogService\obj\x64\Release\UAir_AppLogService.exe
+C:\Users\SamJohnKing\Desktop\UAir_AppLogService\UAir_AppLogService\obj\x64\Release\UAir_AppLogService.pdb
+C:\Users\SamJohnKing\Desktop\UAir_AppLogService\UAir_AppLogService\obj\x64\Release\UAir_AppLogService.csprojResolveAssemblyReference.cache
