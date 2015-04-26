@@ -100,6 +100,28 @@ namespace UAir_AppLogService
             if(Matrix[now_row][now_col]==0) return "NULL";
             return LocationName[Matrix[now_row][now_col] - 1];
         }
+        public string SearchLocation(int code)
+        {
+            KeyValuePair<double,double> pair=SearchPointByCode(code);
+            return SearchLocation(pair.Key, pair.Value);
+        }
+        public int SearchLocationCode(double longitude, double latitude)
+        {
+            int now_row = (int)((latitude - LatitudeStart) / Ystep);
+            if (now_row < 0) return -1;
+            if (now_row >= RowNum) return -1;
+            int now_col = (int)((longitude - LongitudeStart) / Xstep);
+            if (now_col < 0) return -1;
+            if (now_col >= ColNum) return -1;
+            if (Matrix[now_row][now_col] == 0) return -1;
+            return now_row*ColNum+now_col;
+        }
+        public KeyValuePair<double, double> SearchPointByCode(int code)
+        {
+            int now_col = code % ColNum;
+            int now_row = code / ColNum;
+            return new KeyValuePair<double,double>((now_col+0.5)*Xstep+LongitudeStart,(now_row+0.5)*Ystep+LatitudeStart);
+        }
     }
     class AppLogParser
     {
@@ -127,12 +149,16 @@ namespace UAir_AppLogService
             }
             return ans_list;
         }
-        public string Province_Focus = null;
-        public string City_Focus = null;
+        public static string Province_Focus = null;
+        public static string City_Focus = null;
         public static StreamWriter FocusOutput = null;
         public static string Accumulated_User_List_Path = null;
+        public static string Forbiden_Grid_List_Path = null;
         public static Dictionary<string,HashSet<string>> Accumulated_User_List = null;
         public static Dictionary<string, HashSet<string>> Instant_User_list = null;
+        public static HashSet<int> Forbiden_Grid_List = null;
+        public static Dictionary<int, int> TotalRequestDictionary = null;
+        public static Dictionary<int, int> TotalErrorRequestDictionary = null;
         public static void SocketToLocalDB(string IP, int port, string info)
         {
             Socket s = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -266,6 +292,13 @@ namespace UAir_AppLogService
             }
             else Report["GetAQIHistory24HourByLocation_Counter"] = 1;
             //-------------------------------------------------------------------------------------------------------------------------
+            int code = CityDecoder.SearchLocationCode((double)json.Args.Lng, (double)json.Args.Lat);
+            if (user_type.Equals("cig: ") && (!Forbiden_Grid_List.Contains(code)))
+            {
+                if (!TotalRequestDictionary.ContainsKey(code)) TotalRequestDictionary[code] = 0;
+                TotalRequestDictionary[code] = (int)TotalRequestDictionary[code] + 1;
+            }
+            //-------------------------------------------------------------------------------------------------------------------------
             string province_loc = ProvinceDecoder.SearchLocation((double)json.Args.Lng, (double)json.Args.Lat);
             string city_loc = CityDecoder.SearchLocation((double)json.Args.Lng, (double)json.Args.Lat);
             Dictionary<string, Object> Handle = null;
@@ -358,6 +391,13 @@ namespace UAir_AppLogService
             }
             else Report["GetAQIPredictionByLocation_Counter"] = 1;
             //-------------------------------------------------------------------------------------------------------------------------
+            int code = CityDecoder.SearchLocationCode((double)json.Args.Lng, (double)json.Args.Lat);
+            if (user_type.Equals("cig: ") && (!Forbiden_Grid_List.Contains(code)))
+            {
+                if (!TotalRequestDictionary.ContainsKey(code)) TotalRequestDictionary[code] = 0;
+                TotalRequestDictionary[code] = (int)TotalRequestDictionary[code] + 1;
+            }
+            //-------------------------------------------------------------------------------------------------------------------------
             string province_loc = ProvinceDecoder.SearchLocation((double)json.Args.Lng, (double)json.Args.Lat);
             string city_loc = CityDecoder.SearchLocation((double)json.Args.Lng, (double)json.Args.Lat);
             Dictionary<string, Object> Handle = null;
@@ -449,6 +489,13 @@ namespace UAir_AppLogService
                 Report["GetAirInfoByLocation_Counter"] = (int)Report["GetAirInfoByLocation_Counter"] + 1;
             }
             else Report["GetAirInfoByLocation_Counter"] = 1;
+            //-------------------------------------------------------------------------------------------------------------------------
+            int code = CityDecoder.SearchLocationCode((double)json.Args.Lng, (double)json.Args.Lat);
+            if (user_type.Equals("cig: ") && (!Forbiden_Grid_List.Contains(code)))
+            {
+                if (!TotalRequestDictionary.ContainsKey(code)) TotalRequestDictionary[code] = 0;
+                TotalRequestDictionary[code] = (int)TotalRequestDictionary[code] + 1;
+            }
             //-------------------------------------------------------------------------------------------------------------------------
             string province_loc = ProvinceDecoder.SearchLocation((double)json.Args.Lng, (double)json.Args.Lat);
             string city_loc = CityDecoder.SearchLocation((double)json.Args.Lng, (double)json.Args.Lat);
@@ -592,6 +639,12 @@ namespace UAir_AppLogService
                     Report[ID_str] = (int)Report[ID_str] + 1;
                 }
                 else Report[ID_str] = 1;
+            }
+            if (user_type.Equals("cig: ") && (log_obj.Member.EndsWith("ByLocation")))
+            {
+                int code = CityDecoder.SearchLocationCode((double)log_obj.Args.Lng, (double)log_obj.Args.Lat);
+                if (!TotalErrorRequestDictionary.ContainsKey(code)) TotalErrorRequestDictionary[code] = 0;
+                TotalErrorRequestDictionary[code] = (int)TotalErrorRequestDictionary[code] + 1;
             }
             if(log_obj.Member.Equals("GetAQIHistory24HourByLocation")){
                 return ErrorAnalysis_GetAQIHistory24HourByLocation(user_type, DateTime_value, log_obj);
@@ -897,7 +950,22 @@ namespace UAir_AppLogService
                 }
                 Accumulated_User_List_Fin.Close();
             }
+            if (Forbiden_Grid_List == null)
+            {
+                if (Forbiden_Grid_List_Path == null) return null;
+                StreamReader Forbiden_Grid_List_Fin = new StreamReader(Forbiden_Grid_List_Path);
+                Forbiden_Grid_List = new HashSet<int>();
+                string fin_str = Forbiden_Grid_List_Fin.ReadLine();
+                while (fin_str != null)
+                {
+                    Forbiden_Grid_List.Add(Convert.ToInt32(fin_str));
+                    fin_str = Forbiden_Grid_List_Fin.ReadLine();
+                }
+                Forbiden_Grid_List_Fin.Close();
+            }
             Instant_User_list = new Dictionary<string, HashSet<string>>();
+            TotalRequestDictionary = new Dictionary<int,int>();
+            TotalErrorRequestDictionary = new Dictionary<int,int>();
             if (!Directory.Exists(LogDir)) return null;
             Report = new Dictionary<string, object>();
             DirectoryInfo dir = new DirectoryInfo(LogDir);
@@ -955,7 +1023,7 @@ namespace UAir_AppLogService
                                     if (FocusOutput != null)
                                     {
                                         FocusOutput.WriteLine(File_item.Directory.Parent.Parent.Parent + "\\" + File_item.Directory.Parent.Parent + "\\" + File_item.Directory.Parent + "\\" + File_item.Directory.Name + "\\" + File_item);
-                                        FocusOutput.WriteLine("\nFocus " + this.Province_Focus + " " + this.City_Focus + " log\n=========>\n" + fin_str);
+                                        FocusOutput.WriteLine("\nFocus " + Province_Focus + " " + City_Focus + " log\n=========>\n" + fin_str);
                                         fin_str = fin.ReadLine();
                                         while ((fin_str != null) && (!new Regex(@"^(?<date>[0-9|-]+)T(?<time>[0-9|:]+),").Match(fin_str).Success))
                                         {
@@ -1008,25 +1076,51 @@ namespace UAir_AppLogService
             }
             Accumulated_User_List_Fout.Close();
         }
+        public void Academic_Parser(String LogDir)
+        {
+            Report=Parse(LogDir);
+            var utf8WithBom = new System.Text.UTF8Encoding(true);
+            StreamWriter fout = new StreamWriter("Academic.csv", false, utf8WithBom);
+            fout.WriteLine("longitude,latitude,code,counter,city");
+            foreach (int code_iter in TotalRequestDictionary.Keys)
+            {
+                int counter = TotalRequestDictionary[code_iter];
+                string loc_name = CityDecoder.SearchLocation(code_iter);
+                KeyValuePair<double, double> pair = CityDecoder.SearchPointByCode(code_iter);
+                fout.WriteLine(pair.Key + "," + pair.Value + "," + code_iter + "," + counter + "," + loc_name);
+            }
+            /* Output Forbiden List
+            Dictionary<string, KeyValuePair<int, int>> CenterTable = new Dictionary<string, KeyValuePair<int, int>>();
+            foreach(int code_iter in TotalRequestDictionary.Keys){
+                int counter = TotalRequestDictionary[code_iter];
+                string loc_name = CityDecoder.SearchLocation(code_iter);
+                if (!CenterTable.ContainsKey(loc_name)) CenterTable[loc_name] = new KeyValuePair<int, int>(code_iter, counter);
+                else if (CenterTable[loc_name].Value < counter) CenterTable[loc_name] = new KeyValuePair<int, int>(code_iter, counter);
+            }
+            foreach (string loc_name in CenterTable.Keys)
+            {
+                int code = CenterTable[loc_name].Key;
+                int counter = CenterTable[loc_name].Value;
+                KeyValuePair<double, double> pair = CityDecoder.SearchPointByCode(code);
+                fout.WriteLine(pair.Key + "," + pair.Value + "," + code + "," + counter + "," + loc_name);
+            }
+            */
+            fout.Close();
+        }
         static void Main(string[] args)
         {
             DateTime st_time=DateTime.Parse("2015-03-01 00:00:00");
             DateTime en_time = DateTime.Parse("2015-04-16 10:00:00");
             AppLogParser.FocusOutput = new StreamWriter("Focus.txt");
             AppLogParser.Accumulated_User_List_Path = "Accumulated_User_List.txt";
+            AppLogParser.Forbiden_Grid_List_Path = "Forbiden.txt";
+            /*
             for (; st_time < en_time; st_time = st_time.AddHours(1))
             {
                 new AppLogParser().Parse("LogInput", st_time);
             }
-            /*
-            Dictionary<string,Object> Report=new AppLogParser().Parse("LogInput");
-            foreach(var item in Report.Keys)
-            {
-                if (item.IndexOf("Client_UrWeatheriOS") == -1)
-                if (item.IndexOf("Client_cig")==-1)
-                Console.WriteLine(item + "\n========>" + Report[item]);
-            }
-            */
+             */
+            new AppLogParser().Academic_Parser("LogInput");
             AppLogParser.FocusOutput.Close();
             AppLogParser.Output_Accumulated_User_List();
             return;

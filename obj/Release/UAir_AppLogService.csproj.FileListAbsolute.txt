@@ -1,0 +1,6 @@
+C:\Users\SamJohnKing\Desktop\UAir_AppLogService\UAir_AppLogService\bin\Release\UAir_AppLogService.exe.config
+C:\Users\SamJohnKing\Desktop\UAir_AppLogService\UAir_AppLogService\bin\Release\UAir_AppLogService.exe
+C:\Users\SamJohnKing\Desktop\UAir_AppLogService\UAir_AppLogService\bin\Release\UAir_AppLogService.pdb
+C:\Users\SamJohnKing\Desktop\UAir_AppLogService\UAir_AppLogService\obj\Release\UAir_AppLogService.csprojResolveAssemblyReference.cache
+C:\Users\SamJohnKing\Desktop\UAir_AppLogService\UAir_AppLogService\obj\Release\UAir_AppLogService.exe
+C:\Users\SamJohnKing\Desktop\UAir_AppLogService\UAir_AppLogService\obj\Release\UAir_AppLogService.pdb
