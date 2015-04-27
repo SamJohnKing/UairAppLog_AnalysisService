@@ -1,6 +1,6 @@
 ﻿#define Azure
 //#define WriteToDB
-//#define WriteToGeoInfo
+#define WriteToGeoInfo
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -1120,7 +1120,7 @@ namespace UAir_AppLogService
                 new AppLogParser().Parse("LogInput", st_time);
             }
              */
-            new AppLogParser().Academic_Parser("LogInput\\2015\\04\\10\\");
+            new AppLogParser().Academic_Parser("LogInput\\");
             AppLogParser.FocusOutput.Close();
             AppLogParser.Output_Accumulated_User_List();
             return;
