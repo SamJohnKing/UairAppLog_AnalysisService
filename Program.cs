@@ -1,6 +1,7 @@
-﻿#define Azure
-//#define WriteToDB
-#define WriteToGeoInfo
+﻿//#define Azure
+#define WriteToDB
+//#define WriteToGeoInfo
+//#define AcademicMode
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -757,7 +758,7 @@ namespace UAir_AppLogService
 #if Azure     
             string Conn_str="Data Source=tcp:dy8lnjfo1r.database.windows.net,1433;Initial Catalog=UAirDBv3Test;User ID=adm@dy8lnjfo1r;Password=abcd1234!;";
 #else
-            string Conn_str="Data Source=127.0.0.1;Initial Catalog=AppLogAnalysis;User Id=DBUser;Password=DBUser;";
+            string Conn_str = "Data Source=urbcomp01;Initial Catalog=ruiyuan_test;Persist Security Info=True;User ID=sa;Password=abcd1234!;";
 #endif
             using (SqlConnection conn = new SqlConnection(Conn_str))
             {
@@ -806,7 +807,7 @@ namespace UAir_AppLogService
 #if Azure
             string Conn_str = "Data Source=tcp:dy8lnjfo1r.database.windows.net,1433;Initial Catalog=UAirDBv3Test;User ID=adm@dy8lnjfo1r;Password=abcd1234!;";
 #else
-            string Conn_str="Data Source=127.0.0.1;Initial Catalog=AppLogAnalysis;User Id=DBUser;Password=DBUser;";
+            string Conn_str="Data Source=urbcomp01;Initial Catalog=ruiyuan_test;Persist Security Info=True;User ID=sa;Password=abcd1234!;";
 #endif
             using (SqlConnection conn = new SqlConnection(Conn_str))
             {
@@ -885,6 +886,15 @@ namespace UAir_AppLogService
                             cmd.CommandText = "Exec Insert_User_Distribution_Active_Counter '" + Timestamp + "',N'" + city_loc + "','Hour'," + Handle_k.User_Active_Counter_Hour + ";";
                             cmd.ExecuteNonQuery();
                         }
+                    }
+                    //----------------------------------------------------------------------------------------------------------------
+                    Dictionary<int, int> GeoRequest = (Dictionary<int,int>)Report["TotalRequestDictionary"];
+                    foreach (int code in GeoRequest.Keys)
+                    {
+                        KeyValuePair<double,double> ptr = CityDecoder.SearchPointByCode(code);
+                        cmd.CommandText = "Exec Insert_User_Distribution_Grid_Counter '" + Timestamp + "',"
+                        + code + "," + GeoRequest[code] + "," + ptr.Key + ","+ ptr.Value +";";
+                        cmd.ExecuteNonQuery();
                     }
                 }
                 catch (Exception ex)
@@ -1062,6 +1072,7 @@ namespace UAir_AppLogService
                 }
                 fin.Close();
             }
+            Report["TotalRequestDictionary"] = TotalRequestDictionary;
             return Report;
         }
         public static void Output_Accumulated_User_List()
@@ -1114,13 +1125,14 @@ namespace UAir_AppLogService
             AppLogParser.FocusOutput = new StreamWriter("Focus.txt");
             AppLogParser.Accumulated_User_List_Path = "Accumulated_User_List.txt";
             AppLogParser.Forbiden_Grid_List_Path = "Forbiden.txt";
-            /*
+#if AcademicMode  
+            new AppLogParser().Academic_Parser("LogInput\\");
+#else
             for (; st_time < en_time; st_time = st_time.AddHours(1))
             {
                 new AppLogParser().Parse("LogInput", st_time);
             }
-             */
-            new AppLogParser().Academic_Parser("LogInput\\");
+#endif
             AppLogParser.FocusOutput.Close();
             AppLogParser.Output_Accumulated_User_List();
             return;
