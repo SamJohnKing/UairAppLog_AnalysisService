@@ -1,6 +1,7 @@
 ﻿//#define Azure
 #define WriteToDB
 //#define WriteToGeoInfo
+#define HintInGeoInfo
 //#define AcademicMode
 using System;
 using System.Collections.Generic;
@@ -908,10 +909,10 @@ namespace UAir_AppLogService
                 }
             }
         }
-        public void Parse(string Prefix,DateTime Timestamp)
+        public bool Parse(string Prefix,DateTime Timestamp)
         {
             Report=Parse(Prefix + "\\" + Timestamp.ToString("yyyy\\\\MM\\\\dd\\\\HH"));
-            if (Report == null) return;
+            if (Report == null) return false;
 #if WriteToDB
             DictionaryToDB(Timestamp, "GetAQIHistory24HourByLocation");
             DictionaryToDB(Timestamp, "GetAQIHistoryByStationMS");
@@ -925,6 +926,7 @@ namespace UAir_AppLogService
             DictionaryToDB(Timestamp, "Ping");
             GeoDictionaryToDB(Timestamp);
 #endif
+            return true;
         }
         static UAir_AppLogService.GeoInfoDecoder ProvinceDecoder = null;
         static UAir_AppLogService.GeoInfoDecoder CityDecoder = null;
@@ -990,11 +992,15 @@ namespace UAir_AppLogService
             string eventId_str;
             string pid_str;
             string tid_str;
-            //SocketToLocalDB("127.0.0.1", 1234, "DeletePointAll::");
+#if WriteToGeoInfo
+            SocketToLocalDB("127.0.0.1", 1234, "DeletePointAll::");
+#endif
             foreach (FileInfo File_item in files)
             {
                 Console.Error.WriteLine(File_item.Directory.Parent.Parent.Parent+"\\"+File_item.Directory.Parent.Parent + "\\" + File_item.Directory.Parent + "\\" + File_item.Directory.Name + "\\" + File_item);
+#if HintInGeoInfo
                 SocketToLocalDB("127.0.0.1", 1234, "ShowTextArea2::" + File_item.Directory.Parent.Parent.Parent + "\\" + File_item.Directory.Parent.Parent + "\\" + File_item.Directory.Parent + "\\" + File_item.Directory.Name + "\\" + File_item);
+#endif
                 StreamReader fin = new StreamReader(File_item.Open(FileMode.Open));
                 string fin_str = fin.ReadLine();
                 while (fin_str != null)
@@ -1118,19 +1124,63 @@ namespace UAir_AppLogService
             */
             fout.Close();
         }
+        static DateTime RoundTime(DateTime t){
+            t = t.AddMilliseconds(-t.Millisecond);
+            t = t.AddSeconds(-t.Second);
+            return t.AddMinutes(-t.Minute);
+        }
         static void Main(string[] args)
         {
-            DateTime st_time=DateTime.Parse("2015-03-01 00:00:00");
-            DateTime en_time = DateTime.Parse("2015-04-16 10:00:00");
+#if AcademicMode  
             AppLogParser.FocusOutput = new StreamWriter("Focus.txt");
             AppLogParser.Accumulated_User_List_Path = "Accumulated_User_List.txt";
             AppLogParser.Forbiden_Grid_List_Path = "Forbiden.txt";
-#if AcademicMode  
-            new AppLogParser().Academic_Parser("LogInput\\");
+            new AppLogParser().Academic_Parser("wawsapplogblobuair-newdb-test\\uair-newdb-test\\");
 #else
-            for (; st_time < en_time; st_time = st_time.AddHours(1))
+    #if Azure
+            string Conn_str = "Data Source=tcp:dy8lnjfo1r.database.windows.net,1433;Initial Catalog=UAirDBv3Test;User ID=adm@dy8lnjfo1r;Password=abcd1234!;";
+    #else
+            string Conn_str="Data Source=urbcomp01;Initial Catalog=ruiyuan_test;Persist Security Info=True;User ID=sa;Password=abcd1234!;";
+    #endif
+            using (SqlConnection conn = new SqlConnection(Conn_str))
             {
-                new AppLogParser().Parse("LogInput", st_time);
+                try
+                {
+                    conn.Open();
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = conn;
+                    cmd.CommandText = "select max(Timestamp) from UAirMonitor_UpdateLog;";
+                    SqlDataReader dr=cmd.ExecuteReader();
+                    dr.Read();
+                    DateTime st_time = Convert.ToDateTime(dr[0]);
+                    st_time=st_time.AddHours(1);
+                    conn.Close();
+                    conn.Open();
+                    //------------------------------------------------------------------------
+                    Downloader.LogDownloader.StartDownloader(st_time, ".\\");
+                    DateTime en_time = RoundTime(DateTime.Now.AddHours(-1));
+                    AppLogParser.FocusOutput = new StreamWriter("Focus.txt");
+                    AppLogParser.Accumulated_User_List_Path = "Accumulated_User_List.txt";
+                    AppLogParser.Forbiden_Grid_List_Path = "Forbiden.txt";
+                    AppLogParser Single_item = new AppLogParser();
+                    for (; st_time <= en_time; st_time = st_time.AddHours(1))
+                    {
+                        if (Single_item.Parse("wawsapplogblobuair-newdb-test\\uair-newdb-test\\", st_time))
+                        {
+                            cmd.CommandText = "insert into UAirMonitor_UpdateLog (Timestamp,Info) values('" + st_time + "',N'NULL');";
+                            cmd.ExecuteNonQuery();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine(ex.ToString() + "\n" + ex.StackTrace);
+                    system("pause");
+                }
+                finally
+                {
+                    conn.Close();
+                }
             }
 #endif
             AppLogParser.FocusOutput.Close();
