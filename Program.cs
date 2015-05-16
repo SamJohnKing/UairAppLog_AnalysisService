@@ -1,7 +1,7 @@
 ﻿//#define Azure
 #define WriteToDB
 //#define WriteToGeoInfo
-#define HintInGeoInfo
+//#define HintInGeoInfo
 //#define AcademicMode
 using System;
 using System.Collections.Generic;
@@ -129,6 +129,7 @@ namespace UAir_AppLogService
     {
         [DllImport("msvcrt.dll")]
         static extern bool system(string str);
+        public Dictionary<string, Object> OldReport = null;
         public Dictionary<string, Object> Report =null;
         public static List<FileInfo> GetAllFiles(DirectoryInfo Dir)
         {
@@ -173,13 +174,14 @@ namespace UAir_AppLogService
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString()+"\n"+ex.StackTrace);
+                Console.WriteLine("<1>>>>>>"+ex.ToString()+"\n"+ex.StackTrace);
             }
             finally
             {
                 s.Close();
             }
         }
+        [Serializable]
         public class API_Info_Object
         {
             //GetAQIHistory24HourByLocation
@@ -246,9 +248,35 @@ namespace UAir_AppLogService
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine(ex.ToString()+"\n"+ex.StackTrace);
+                Console.Error.WriteLine("<2>>>>>>" + ex.ToString() + "\n" + ex.StackTrace);
                 system("pause");
             }
+        }
+        void AppendReport(ref Dictionary<string,object> OldReport, ref Dictionary<string,object> Report){
+                if (!OldReport.ContainsKey("GeoDic")) return;
+                Dictionary<string, object> Old_GeoDic = (Dictionary<string, object>)OldReport["GeoDic"];
+                foreach (string province_loc in Old_GeoDic.Keys)
+                {
+
+                    Dictionary<string, object> Old_GeoDic_Province = (Dictionary<string, object>)Old_GeoDic[province_loc];
+                    foreach (string city_loc in Old_GeoDic_Province.Keys)
+                    {
+                        API_Info_Object Old_GeoDic_Province_City = (API_Info_Object)Old_GeoDic_Province[city_loc];
+                        //-----------------------------------------------------------------------------------------------------------------------
+                        Dictionary<string, object> GeoDic = null;
+                        if (!Report.ContainsKey("GeoDic")) Report["GeoDic"] = GeoDic = new Dictionary<string, object>();
+                        else GeoDic = (Dictionary<string, object>)Report["GeoDic"];
+
+                        Dictionary<string, object> GeoDic_Province = null;
+                        if (!GeoDic.ContainsKey(province_loc)) GeoDic[province_loc] = GeoDic_Province = new Dictionary<string, object>();
+                        else GeoDic_Province = (Dictionary<string, object>)GeoDic[province_loc];
+                        API_Info_Object GeoDic_Province_City = null;
+                        if (!GeoDic_Province.ContainsKey(city_loc)) GeoDic_Province[city_loc] = GeoDic_Province_City = new API_Info_Object();
+                        //------------------------------------------------------------------------------------------------------------------------
+                        if (GeoDic_Province_City!=null)
+                            GeoDic_Province_City.User_Accumulated_Counter_Hour = Old_GeoDic_Province_City.User_Accumulated_Counter_Hour;
+                    }
+                }
         }
         bool ErrorAnalysis_GetAQIHistory24HourByLocation(string user_type,DateTime Timestamp, LogObject json)
         {
@@ -794,7 +822,8 @@ namespace UAir_AppLogService
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine(ex.ToString()+"\n"+ex.StackTrace);
+                    Console.Error.WriteLine("<4>>>>>>" + ex.ToString() + "\n" + ex.StackTrace);
+                    system("pause");
                 }
                 finally
                 {
@@ -900,7 +929,7 @@ namespace UAir_AppLogService
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine(ex.ToString()+"\n"+ex.StackTrace);
+                    Console.Error.WriteLine("<5>>>>>>" + ex.ToString() + "\n" + ex.StackTrace);
                     system("pause");
                 }
                 finally
@@ -911,8 +940,16 @@ namespace UAir_AppLogService
         }
         public bool Parse(string Prefix,DateTime Timestamp)
         {
+            if (OldReport == null)
+            {
+                Object obj = DeserializeObject("DicRecord.dat");
+                if (obj != null) OldReport = (Dictionary<string, object>)obj;
+                else OldReport = new Dictionary<string, object>();
+            }
             Report=Parse(Prefix + "\\" + Timestamp.ToString("yyyy\\\\MM\\\\dd\\\\HH"));
             if (Report == null) return false;
+            AppendReport(ref OldReport,ref Report);
+            OldReport = Report;
 #if WriteToDB
             DictionaryToDB(Timestamp, "GetAQIHistory24HourByLocation");
             DictionaryToDB(Timestamp, "GetAQIHistoryByStationMS");
@@ -1129,6 +1166,21 @@ namespace UAir_AppLogService
             t = t.AddSeconds(-t.Second);
             return t.AddMinutes(-t.Minute);
         }
+        static void SerializeObject(object obj,string path){
+            Stream SerializeStream = new FileStream(path, FileMode.Create, FileAccess.ReadWrite);
+            System.Runtime.Serialization.Formatters.Binary.BinaryFormatter binFormat = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();//创建二进制序列化器
+            binFormat.Serialize(SerializeStream,obj);
+            SerializeStream.Close();
+        }
+        static object DeserializeObject(string path)
+        {
+            if (!File.Exists(path)) return null;
+            FileStream fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            System.Runtime.Serialization.Formatters.Binary.BinaryFormatter b = new System.Runtime.Serialization.Formatters.Binary.BinaryFormatter();
+            object obj = b.Deserialize(fileStream);
+            fileStream.Close();
+            return obj;
+        }
         static void Main(string[] args)
         {
 #if AcademicMode  
@@ -1167,14 +1219,17 @@ namespace UAir_AppLogService
                     {
                         if (Single_item.Parse("wawsapplogblobuair-newdb-test\\uair-newdb-test\\", st_time))
                         {
+#if WriteToDB
                             cmd.CommandText = "insert into UAirMonitor_UpdateLog (Timestamp,Info) values('" + st_time + "',N'NULL');";
                             cmd.ExecuteNonQuery();
+#endif
                         }
                     }
+                    SerializeObject(Single_item.OldReport, "DicRecord.dat");
                 }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine(ex.ToString() + "\n" + ex.StackTrace);
+                    Console.Error.WriteLine("<6>>>>>>" + ex.ToString() + "\n" + ex.StackTrace);
                     system("pause");
                 }
                 finally
